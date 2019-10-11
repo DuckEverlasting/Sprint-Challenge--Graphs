@@ -12,26 +12,26 @@ class Graph:
         queue = Queue()
         queue.enqueue([[None], [start]])
         visited = set()
-        paths = []
+        bestPath = None
+        bestLength = 0
         while queue.size:
             current = queue.dequeue()
             currentRoom = current[1][-1]
             visited.add(currentRoom)
             if currentRoom == finish:
-                paths.append(current)
-            for dir in self.graph[currentRoom]:
-                dest = self.graph[currentRoom][dir]
-                if dest not in visited:
-                    queue.enqueue([current[0] + [dir], current[1] + [dest]])
+                if not bestLength or len(current[0]) < bestLength:
+                    bestPath = [current[0], current[1]]
+                    bestLength = len(bestPath[0])
+            else:
+                for dir in self.graph[currentRoom]:
+                    dest = self.graph[currentRoom][dir]
+                    if dest not in visited:
+                        queue.enqueue([current[0] + [dir], current[1] + [dest]])
 
-        if len(paths):
-            best = paths[0]
-            for path in paths:
-                if len(best[1]) > len(path[1]):
-                    best = path
-            best[0].pop(0)
-            best[1].pop(0)
-            return best
+        if bestLength:
+            bestPath[0].pop(0)
+            bestPath[1].pop(0)
+            return bestPath
         return None
 
     def subgraphBestTraversal(self, graph, start=0):
@@ -76,7 +76,7 @@ class Graph:
             bestPath[1].pop(0)
         return bestPath
 
-    def attemptSubGraph(self, start, previousRoom, maxSize=50):
+    def attemptSubGraph(self, start, previousRoom, maxSize=50, retSize=False):
         opposites = {'n': 's', 's': 'n', 'e': 'w', 'w': 'e'}
         unexploredPaths = 0
         path=[]
@@ -104,11 +104,14 @@ class Graph:
                     if subgraph[current][dir] is "?":
                         unexploredExits.append(dir)
                 elif current != start:
-                    return None
+                    return 0
 
             if not len(unexploredExits):
                 if len(path) is 1:
-                    return subgraph
+                    if retSize:
+                        return len(subgraph)
+                    else:
+                        return subgraph
                 wayBack = opposites[path.pop()]
                 current = subgraph[current][wayBack]
             else:
@@ -119,7 +122,7 @@ class Graph:
                 path.append(wayForward)
 
             if len(subgraph) > maxSize:
-                return None
+                return 0
 
 
     def findNearestUnexplored(self, start, targets):
@@ -145,7 +148,10 @@ class Graph:
         previousTarget = None
         currentTarget = targetOrder.pop(0)
 
-        targets = [i for i in range(1, self.size)]
+        targetList = [i for i in range(1, self.size)]
+        targets = set()
+        for i in targetList:
+            targets.add(i)
         while len(targets):
             previousTarget = currentTarget
             if len(targetOrder):
@@ -166,7 +172,11 @@ class Graph:
 
     def getAllSubpathData(self, subpathSize):
         subpathGraph = {}
-        targets = [i for i in range(self.size)]
+        targetList = [i for i in range(1, self.size)]
+        targets = set()
+        for i in targetList:
+            targets.add(i)
+        
         for room in self.graph:
             if int(room) in targets and len(self.graph[room]) == 2:
                 for dir in self.graph[room]:
@@ -190,14 +200,31 @@ class Graph:
         previousTarget = None
         currentTarget = targetOrder.pop(0)
 
-        targets = [i for i in range(1, self.size)]
+        targetList = [i for i in range(1, self.size)]
+        targets = set()
+        for i in targetList:
+            targets.add(i)
         while len(targets):
             previousTarget = currentTarget
             if len(targetOrder):
                 currentTarget = targetOrder.pop(0)
             else:
                 nearestUnexplored, connecting = self.findNearestUnexplored(currentTarget, targets)
-                currentTarget = random.choice(nearestUnexplored)
+                if len(nearestUnexplored) > 1:
+                    smallest = random.choice(nearestUnexplored)
+                    if len(self.graph[smallest]) == 2:
+                        smallestSize = self.attemptSubGraph(smallest, currentTarget, 100, retSize=True)
+                    else:
+                        smallestSize = None
+                    for path in [i for i in nearestUnexplored if i != smallest]:
+                        if len(self.graph[path]) == 2:
+                            pathSize = self.attemptSubGraph(path, currentTarget, 100, retSize=True)
+                            if pathSize:
+                                if not smallestSize or smallestSize > pathSize:
+                                    smallest = path
+                    currentTarget = smallest
+                else:
+                    currentTarget = nearestUnexplored[0]
             targets.remove(currentTarget)
             currentPath = self.superBfs(previousTarget, currentTarget)
             if not currentPath:
@@ -218,5 +245,5 @@ class Graph:
             
             if len(traversalPath) > 1000:
                 return None
-                    
+        traversalPath.pop(0)                    
         return traversalPath
