@@ -36,45 +36,6 @@ class Graph:
             return bestPath
         return None
 
-    def subgraphBestTraversal(self, graph, start=0):
-        queue = Queue()
-        queue.enqueue([[start], {}])
-        bestPath = []
-        bestLength = None
-        previousRoom = None
-        currentRoom = None
-        while queue.size:
-            previousRoom = currentRoom
-            current = queue.dequeue()
-            currentRoom = current[0][-1]
-            currentGraph = current[1]
-
-            if currentRoom not in currentGraph:
-                currentGraph[currentRoom] = ""
-
-            if currentRoom in self.savedPaths:
-                if previousRoom in self.savedPaths[currentRoom]:
-                    shortcut = self.savedPaths[currentRoom][previousRoom]
-                    current[0].extend(shortcut)
-                    for dir in self.graph[currentRoom]:
-                        if self.graph[currentRoom][dir] != previousRoom:
-                            currentGraph[currentRoom] += dir
-
-            if len(currentGraph) == len(graph) and currentRoom == start:
-                if not bestLength or len(current[0]) < bestLength:
-                    bestPath = current[0]
-                    bestLength = len(bestPath)
-            elif not bestLength or len(current[0]) < bestLength:
-                for dir in graph[currentRoom]:
-                    dest = graph[currentRoom][dir]
-                    if dir not in currentGraph[currentRoom]:
-                        graphCopy = currentGraph.copy()
-                        graphCopy[currentRoom] += dir
-                        queue.enqueue([current[0] + [dest], graphCopy])
-
-        if len(bestPath):
-            bestPath.pop(0)
-        return bestPath
 
     def pathfind(self, graph, start, previous):
         if start in self.savedPaths and previous in self.savedPaths[start]:
@@ -183,54 +144,6 @@ class Graph:
                 return [output, current]
             localExplored.add(current)
 
-    def getTraversalPath(self, lockedTargetOrder=[0]):
-        traversalPath = []
-        targetOrder = lockedTargetOrder[:]
-        previousTarget = None
-        currentTarget = targetOrder.pop(0)
-
-        targetList = [i for i in range(1, self.size)]
-        targets = set()
-        for i in targetList:
-            targets.add(i)
-        while len(targets):
-            previousTarget = currentTarget
-            if len(targetOrder):
-                currentTarget = targetOrder.pop(0)
-            else:
-                currentTarget = random.choice(self.findNearestUnexplored(currentTarget, targets))
-            targets.remove(currentTarget)
-            currentPath = self.bfs(previousTarget, currentTarget)
-            if not currentPath:
-                print("ERROR")
-                break
-            for room in currentPath[1]:
-                if room in targets:
-                    targets.remove(int(room))
-            for dir in currentPath[0]:
-                traversalPath.append(dir)
-        return traversalPath
-
-    def getAllSubpathData(self, subpathSize):
-        subpathGraph = {}
-        targets = set([i for i in range(1, self.size)])
-        
-        for room in self.graph:
-            if int(room) in targets and len(self.graph[room]) == 2:
-                for dir in self.graph[room]:
-                    connecting = self.graph[room][dir]
-                    subgraph = self.attemptSubGraph(room, connecting, subpathSize)
-                    if subgraph:
-                        if room not in subpathGraph:
-                            subpathGraph[room] = {}
-                        bestTrav = self.subgraphBestTraversal(subgraph, room)
-                        if len(bestTrav):
-                            for i in bestTrav:
-                                if i in targets:
-                                    targets.remove(i)
-                            subpathGraph[room][connecting] = bestTrav
-
-        self.savedPaths = subpathGraph
 
     def smartTraverse(self, start=0, targetLength=1000):
         traversalPath = []
